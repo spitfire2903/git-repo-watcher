@@ -12,6 +12,36 @@ no_changes() {
     echo "Nothing changed: $*"
 }
 
+
+# $1 - Git repository name
+# $2 - Branch name
+has_changes() {
+    cd /home/forge/supermercadonow.com
+    OUTPUT=$(git pull)
+
+    if echo $OUTPUT | grep "composer.json\|composer.lock" >/dev/null 2>&1
+    then
+        composer install --no-interaction --no-dev --prefer-dist
+    fi
+
+    if $IS_MASTER
+    then
+        if echo $OUTPUT | grep "migrations" >/dev/null 2>&1
+        then
+            php artisan migrate --force
+        fi
+        
+        php artisan queue:restart
+    fi
+    
+    php artisan clear-compiled
+    php artisan view:clear
+    php artisan config:clear
+    php artisan route:clear
+    php artisan auth:clear-resets
+    composer dump-autoload
+}
+
 # $1 - Git repository name
 # $2 - Branch name
 # $3 - Commit details
